@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+    <header name = "Access-Control-Allow-Origin" value = "*" /> 
+    <style type = "text/css">
+        *{
+        	margin:0;padding: 0;background: black;
+        }
+        #stop{
+        	position:fixed;
+        	top:0;
+        	left:0;
+        	background: white;
+        	text-decoration: none;
+        	color: black;
+        	font-family: sans-serif;
+        	width:50px;
+        	height:50px;
+        }
+    </style>
+    <script>
+
+window.onload = function() {
+	var ctx = new AudioContext();
+	var audio = document.getElementById('rs-audio');
+	audio.crossOrigin = "anonymous";
+	var audioSrc = ctx.createMediaElementSource(audio);
+	var analyser = ctx.createAnalyser();
+	audioSrc.connect(analyser);
+	analyser.connect(ctx.destination);
+	var frequencyData = new Uint8Array(analyser.frequencyBinCount);
+
+	var canvas = document.getElementById("canvas");
+	var ctx = canvas.getContext("2d");
+	var line_color = '#9CD9F9';
+
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+	canvas.style.display = 'block';
+
+	ctx.fillStyle = line_color;
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = line_color;
+
+	var yAxis = Math.floor(canvas.height/2);
+	var xL = Math.floor(canvas.width/4);
+	var xR = xL*3;
+
+	draw = function (t,f) {
+		var tx=t/256;
+		ctx.fillStyle = "rgb("+Math.abs(t)+","+Math.abs(t)+","+Math.abs(t)+")";
+		ctx.lineWidth = Math.pow(tx+0.1,4);
+		ctx.strokeStyle = "rgb("+Math.abs(t)+","+Math.abs(t)+","+Math.abs(t)+")";
+		ctx.beginPath();
+		drawSine(rat(tx),f);
+		ctx.stroke();
+	};
+
+	function drawSine(t,f) {
+		var x = t;
+		var y = (8/(8+x^4))^8*Math.cos(6*x);
+		ctx.moveTo(xL, yAxis);
+		for (i = xL; i <= xR; i += 1) {
+			x = 1.6*(i-xL)/xL-1.6;
+			y = Math.pow((8/(8+Math.pow(x,4))),8)*Math.cos(10*x-f)/t;
+			ctx.lineTo(i,y*125+yAxis);
+		}
+	}
+
+	function rat(x) {
+		var y;
+		if (x==0.5) {
+			y=0;
+		} else {
+			y = 1/2/(x-1/2);
+		}
+		return y;
+	}
+
+	function renderFrame() {
+		requestAnimationFrame(renderFrame);
+		analyser.getByteFrequencyData(frequencyData);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		for(var i=0;i<6;i++){
+			draw(frequencyData[64*i],f);
+		}
+		f+=0.15;
+	}
+
+	var f = 0;
+	audio.play();
+	renderFrame();
+};
+var playing = 1;
+function stop(){
+ 	var audio = document.getElementById('rs-audio');
+ 	if (playing==1) {
+ 		audio.pause();
+ 		playing = 0;
+ 	} else {
+ 		audio.play();
+ 		playing = 1;
+ 	}
+}
+
+    </script>
+
+</head>
+
+<body>
+	<a href="#" id="stop" onclick="stop()"></a>
+    <audio id="rs-audio">
+    	<source src="jungle.mp3" type="audio/mpeg" >
+    </audio>
+    <canvas id="canvas"></canvas>
+</body>
